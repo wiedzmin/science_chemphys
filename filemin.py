@@ -8,8 +8,9 @@ FIELDS_ORDER = ['Eini', 'Erel', 'b', 'tet', 'fi', 'Emolec', 'Eout', 'Evib',
 
 
 def list_input_files(prefix='', cwd='.'):
-    return [file for file in os.listdir(cwd)
-            if file.endswith('txt') and file.startswith(prefix)]
+    for file in os.listdir(cwd):
+        if file.endswith('txt') and file.startswith(prefix):
+            yield file
 
 
 def get_input_file_number(filename):
