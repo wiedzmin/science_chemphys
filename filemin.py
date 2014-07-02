@@ -69,31 +69,37 @@ def write_delimiters(f, use_csv):
         f.write('====\n')
 
 
-parser = ArgumentParser(description='Arguments for computation.')
-parser.add_argument("prefix", type=str,
-                    help="specify file prefix, e.g Xe, Kr or Hg")
-parser.add_argument("-r", "--rewrite", dest="rewrite",
-                  action="store_true",
-                  help="Rewrite output file")
-parser.add_argument("--csv", dest="use_csv",
-                  action="store_true",
-                  help="Write CSV output")
+def get_args():
+    parser = ArgumentParser(description='Arguments for computation.')
+    parser.add_argument("prefix", type=str,
+                        help="specify file prefix, e.g Xe, Kr or Hg")
+    parser.add_argument("-r", "--rewrite", dest="rewrite",
+                        action="store_true",
+                        help="Rewrite output file")
+    parser.add_argument("--csv", dest="use_csv",
+                        action="store_true",
+                        help="Write CSV output")
+    return parser.parse_args()
 
-args = parser.parse_args()
 
-items_of_interest = []
-for file in list_input_files(args.prefix):
-    items_of_interest.append(get_line_as_dict(get_last_input_line(file)))
-sorted_output = sorted(items_of_interest, key=lambda x: float(x['Emolec']))
-min_emolec_item = sorted_output[0]
-with open('output_' + args.prefix.lower() + '.txt', 'w' if args.rewrite else 'a') as f:
-    if args.rewrite and args.use_csv:
-        write_header_csv(f)
-    write_item(min_emolec_item, f, args.use_csv)
-    write_delimiters(f, args.use_csv)
-with open('output_' + args.prefix.lower() + '_all.txt', 'w' if args.rewrite else 'a') as f:
-    if args.rewrite and args.use_csv:
-        write_header_csv(f)
-    for item in sorted_output:
-        write_item(item, f, args.use_csv)
+def run():
+    args = get_args()
+    items_of_interest = []
+    for file in list_input_files(args.prefix):
+        items_of_interest.append(get_line_as_dict(get_last_input_line(file)))
+    sorted_output = sorted(items_of_interest, key=lambda x: float(x['Emolec']))
+    min_emolec_item = sorted_output[0]
+    with open('output_' + args.prefix.lower() + '.txt', 'w' if args.rewrite else 'a') as f:
+        if args.rewrite and args.use_csv:
+            write_header_csv(f)
+        write_item(min_emolec_item, f, args.use_csv)
         write_delimiters(f, args.use_csv)
+    with open('output_' + args.prefix.lower() + '_all.txt', 'w' if args.rewrite else 'a') as f:
+        if args.rewrite and args.use_csv:
+            write_header_csv(f)
+        for item in sorted_output:
+            write_item(item, f, args.use_csv)
+            write_delimiters(f, args.use_csv)
+
+if __name__ == "__main__":
+    run()
