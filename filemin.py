@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
-from optparse import OptionParser
+from argparse import ArgumentParser
 import os
-import sys
 
 FIELDS_ORDER = ['Eini', 'Erel', 'b', 'tet', 'fi', 'Emolec', 'Eout', 'Evib',
                 'Erot', 'v', 'j']
@@ -69,35 +68,31 @@ def write_delimiters(f, use_csv):
         f.write('====\n')
 
 
-parser = OptionParser(description='Arguments for computation.')
-parser.add_option("--prefix", dest="prefix",
-                  type="string",
-                  help="specify file prefix, e.g Xe, Kr or Hg")
-parser.add_option("-r", "--rewrite", dest="rewrite",
+parser = ArgumentParser(description='Arguments for computation.')
+parser.add_argument("prefix", type=str,
+                    help="specify file prefix, e.g Xe, Kr or Hg")
+parser.add_argument("-r", "--rewrite", dest="rewrite",
                   action="store_true",
                   help="Rewrite output file")
-parser.add_option("--csv", dest="use_csv",
+parser.add_argument("--csv", dest="use_csv",
                   action="store_true",
                   help="Write CSV output")
 
-(options, args) = parser.parse_args()
+args = parser.parse_args()
 
-if not options.prefix:
-    print >>sys.stderr, "filemin: no prefix provided"
-    sys.exit(1)
 items_of_interest = []
-for file in list_input_files(options.prefix):
+for file in list_input_files(args.prefix):
     items_of_interest.append(get_line_as_dict(get_last_input_line(file)))
 sorted_output = sorted(items_of_interest, key=lambda x: float(x['Emolec']))
 min_emolec_item = sorted_output[0]
-with open('output_' + options.prefix.lower() + '.txt', 'w' if options.rewrite else 'a') as f:
-    if options.rewrite and options.use_csv:
+with open('output_' + args.prefix.lower() + '.txt', 'w' if args.rewrite else 'a') as f:
+    if args.rewrite and args.use_csv:
         write_header_csv(f)
-    write_item(min_emolec_item, f, options.use_csv)
-    write_delimiters(f, options.use_csv)
-with open('output_' + options.prefix.lower() + '_all.txt', 'w' if options.rewrite else 'a') as f:
-    if options.rewrite and options.use_csv:
+    write_item(min_emolec_item, f, args.use_csv)
+    write_delimiters(f, args.use_csv)
+with open('output_' + args.prefix.lower() + '_all.txt', 'w' if args.rewrite else 'a') as f:
+    if args.rewrite and args.use_csv:
         write_header_csv(f)
     for item in sorted_output:
-        write_item(item, f, options.use_csv)
-        write_delimiters(f, options.use_csv)
+        write_item(item, f, args.use_csv)
+        write_delimiters(f, args.use_csv)
