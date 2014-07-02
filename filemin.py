@@ -11,41 +11,53 @@ COMMON_DATA_DELIM = "\n"
 CSV_ITEM_DELIM = "\n"
 COMMON_ITEM_DELIM = "====\n"
 
-def list_input_files(prefix='', cwd='.'):
-    for file in os.listdir(cwd):
-        if file.endswith('txt') and file.startswith(prefix):
-            yield file
-
 
 def get_input_file_number(filename):
     return int(filename[filename.rindex('r') + 1: filename.rindex('.')])
 
 
-def get_line_as_dict(test_line):
-    result = {}
-    items = test_line.split()
-    result['Eini'] = items[0]
-    result['Erel'] = items[1]
-    result['b'] = items[2]
-    result['tet'] = items[3]
-    result['fi'] = items[4]
-    result['Emolec'] = items[5]
-    result['Eout'] = items[6]
-    result['Evib'] = items[9]
-    result['Erot'] = items[10]
-    result['v'] = items[11]
-    result['j'] = items[12]
-    result = {key: value.replace(',', '.')
-              for key, value in result.items()}
-    return result
+class InputData:
+    def __init__(self, args):
+        self.args = args
+        self.prefix = args.prefix
+        self.items_of_interest = []
 
+    def get_data(self):
+        if not self.items_of_interest:
+            for file in self.list_input_files(self.args.prefix):
+                self.items_of_interest.append(
+                    self.get_line_as_dict(self.get_last_input_line(file)))
+        return self.items_of_interest
 
-def get_last_input_line(filename):
-    input_lines = None
-    with open(filename, 'r') as f:
-        input_lines = f.read()
-    last_line = input_lines.split('\n')[-2]
-    return last_line
+    def get_line_as_dict(self, test_line):
+        result = {}
+        items = test_line.split()
+        result['Eini'] = items[0]
+        result['Erel'] = items[1]
+        result['b'] = items[2]
+        result['tet'] = items[3]
+        result['fi'] = items[4]
+        result['Emolec'] = items[5]
+        result['Eout'] = items[6]
+        result['Evib'] = items[9]
+        result['Erot'] = items[10]
+        result['v'] = items[11]
+        result['j'] = items[12]
+        result = {key: value.replace(',', '.')
+                  for key, value in result.items()}
+        return result
+
+    def list_input_files(self, prefix='', cwd='.'):
+        for file in os.listdir(cwd):
+            if file.endswith('txt') and file.startswith(prefix):
+                yield file
+
+    def get_last_input_line(self, filename):
+        input_lines = None
+        with open(filename, 'r') as f:
+            input_lines = f.read()
+        last_line = input_lines.split('\n')[-2]
+        return last_line
 
 
 def write_header_csv(f):
@@ -88,9 +100,8 @@ def get_args():
 
 def run():
     args = get_args()
-    items_of_interest = []
-    for file in list_input_files(args.prefix):
-        items_of_interest.append(get_line_as_dict(get_last_input_line(file)))
+    input = InputData(args)
+    items_of_interest = input.get_data()
     sorted_output = sorted(items_of_interest, key=lambda x: float(x['Emolec']))
     min_emolec_item = sorted_output[0]
     with open('output_' + args.prefix.lower() + '.txt', 'w' if args.rewrite else 'a') as f:
