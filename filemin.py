@@ -6,6 +6,10 @@ import os
 FIELDS_ORDER = ['Eini', 'Erel', 'b', 'tet', 'fi', 'Emolec', 'Eout', 'Evib',
                 'Erot', 'v', 'j']
 
+CSV_DATA_DELIM = ";"
+COMMON_DATA_DELIM = "\n"
+CSV_ITEM_DELIM = "\n"
+COMMON_ITEM_DELIM = "====\n"
 
 def list_input_files(prefix='', cwd='.'):
     for file in os.listdir(cwd):
@@ -48,8 +52,8 @@ def write_header_csv(f):
     for key in FIELDS_ORDER:
         f.write(key)
         if key != FIELDS_ORDER[-1]:
-            f.write(';')
-    f.write('\n')
+            f.write(CSV_DATA_DELIM)
+    f.write(CSV_ITEM_DELIM)
 
 
 def write_item(item, f, use_csv):
@@ -57,16 +61,16 @@ def write_item(item, f, use_csv):
         if use_csv:
             f.write(item[key])
             if key != FIELDS_ORDER[-1]:
-                f.write(';')
+                f.write(CSV_DATA_DELIM)
         else:
-            f.write(key + ': ' + item[key] + '\n')
+            f.write(key + ': ' + item[key] + COMMON_DATA_DELIM)
 
 
 def write_delimiters(f, use_csv):
     if use_csv:
-        f.write('\n')
+        f.write(CSV_ITEM_DELIM)
     else:
-        f.write('====\n')
+        f.write(COMMON_ITEM_DELIM)
 
 
 def get_args():
