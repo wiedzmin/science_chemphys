@@ -16,6 +16,70 @@ def get_input_file_number(filename):
     return int(filename[filename.rindex('r') + 1: filename.rindex('.')])
 
 
+class TabularData:
+    def __init__(self, args, data):
+        self.args = args
+        self.items_of_interest = data
+        self.content = []
+        self.current_item = []
+        self.use_csv = args.use_csv
+        self.use_xls = args.use_xls
+        self.reset = False
+        if args.use_csv:
+            self.data_delimiter = CSV_DATA_DELIM
+            self.item_delimiters = CSV_ITEM_DELIM
+        elif not args.use_xls:
+            self.data_delimiter = COMMON_DATA_DELIM
+            self.item_delimiters = COMMON_ITEM_DELIM
+        else:
+            self.data_delimiter = self.item_delimiters = None
+
+    def new_line(self):
+        self.reset = True
+        pass
+
+    def append(self):
+        self.reset = False
+
+    def write_header_csv(self, f):
+        for key in FIELDS_ORDER:
+            f.write(key)
+            if key != FIELDS_ORDER[-1]:
+                f.write(CSV_DATA_DELIM)
+        f.write(CSV_ITEM_DELIM)
+
+    def write_item(self, item, f, use_csv):
+        for key in FIELDS_ORDER:
+            if use_csv:
+                f.write(item[key])
+                if key != FIELDS_ORDER[-1]:
+                    f.write(CSV_DATA_DELIM)
+            else:
+                f.write(key + ': ' + item[key] + COMMON_DATA_DELIM)
+
+    def write_delimiters(self, f, use_csv):
+        if use_csv:
+            f.write(CSV_ITEM_DELIM)
+        else:
+            f.write(COMMON_ITEM_DELIM)
+
+    def run(self):
+        sorted_output = sorted(self.items_of_interest, key=lambda x: float(x['Emolec']))
+        min_emolec_item = sorted_output[0]
+        is_write_header = self.args.rewrite and self.args.use_csv
+        with open('output_' + self.args.prefix.lower() + '.txt', 'w' if self.args.rewrite else 'a') as f:
+            if is_write_header:
+                self.write_header_csv(f)
+            self.write_item(min_emolec_item, f, self.args.use_csv)
+            self.write_delimiters(f, self.args.use_csv)
+        with open('output_' + self.args.prefix.lower() + '_all.txt', 'w' if self.args.rewrite else 'a') as f:
+            if is_write_header:
+                self.write_header_csv(f)
+            for item in sorted_output:
+                self.write_item(item, f, self.args.use_csv)
+                self.write_delimiters(f, self.args.use_csv)
+
+
 class InputData:
     def __init__(self, args):
         self.args = args
@@ -60,31 +124,6 @@ class InputData:
         return last_line
 
 
-def write_header_csv(f):
-    for key in FIELDS_ORDER:
-        f.write(key)
-        if key != FIELDS_ORDER[-1]:
-            f.write(CSV_DATA_DELIM)
-    f.write(CSV_ITEM_DELIM)
-
-
-def write_item(item, f, use_csv):
-    for key in FIELDS_ORDER:
-        if use_csv:
-            f.write(item[key])
-            if key != FIELDS_ORDER[-1]:
-                f.write(CSV_DATA_DELIM)
-        else:
-            f.write(key + ': ' + item[key] + COMMON_DATA_DELIM)
-
-
-def write_delimiters(f, use_csv):
-    if use_csv:
-        f.write(CSV_ITEM_DELIM)
-    else:
-        f.write(COMMON_ITEM_DELIM)
-
-
 def get_args():
     parser = ArgumentParser(description='Arguments for computation.')
     parser.add_argument("prefix", type=str,
@@ -98,23 +137,8 @@ def get_args():
     return parser.parse_args()
 
 
-def run():
+if __name__ == "__main__":
     args = get_args()
     input = InputData(args)
-    items_of_interest = input.get_data()
-    sorted_output = sorted(items_of_interest, key=lambda x: float(x['Emolec']))
-    min_emolec_item = sorted_output[0]
-    with open('output_' + args.prefix.lower() + '.txt', 'w' if args.rewrite else 'a') as f:
-        if args.rewrite and args.use_csv:
-            write_header_csv(f)
-        write_item(min_emolec_item, f, args.use_csv)
-        write_delimiters(f, args.use_csv)
-    with open('output_' + args.prefix.lower() + '_all.txt', 'w' if args.rewrite else 'a') as f:
-        if args.rewrite and args.use_csv:
-            write_header_csv(f)
-        for item in sorted_output:
-            write_item(item, f, args.use_csv)
-            write_delimiters(f, args.use_csv)
-
-if __name__ == "__main__":
-    run()
+    output = TabularData(args, input.get_data())
+    output.run()
