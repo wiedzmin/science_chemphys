@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
 from argparse import ArgumentParser
+from collections import defaultdict
 import os
 
 FIELDS_ORDER = ['Eini', 'Erel', 'b', 'tet', 'fi', 'Emolec', 'Eout', 'Evib',
@@ -16,9 +17,10 @@ COMMON_ITEM_DELIM = "====\n"
 
 
 def list_input_files(prefix='', cwd='.'):
-    for filename in os.listdir(cwd):
+    real_cwd = os.path.abspath(cwd)
+    for filename in os.listdir(real_cwd):
         if filename.endswith('txt') and filename.startswith(prefix):
-            yield filename
+            yield real_cwd + '/' + filename
 
 
 def get_line_as_dict(test_line):
@@ -28,7 +30,16 @@ def get_line_as_dict(test_line):
                         test_line.split())).items()}
 
 
+def get_last_input_line(filename):
+    input_lines = None
+    with open(filename, 'r') as f:
+        input_lines = f.read()
+    last_line = input_lines.split('\n')[-2]
+    return last_line
+
+
 def extract_filename_traits(filename):
+    filename = os.path.basename(filename)
     center_start = filename.find('Center')
     energies_str = filename[PREFIX_LEN:center_start]
     number_str = filename[center_start + 6: filename.rindex('.')]
@@ -55,55 +66,23 @@ def write_item(item, f, use_csv):
     f.write(result)
 
 
-class TabularData:
-    def __init__(self, args, data):
-        self.args = args
-        self.items_of_interest = data
-        self.content = []
-        self.current_item = []
-        self.use_csv = args.use_csv
-        if args.use_csv:
-            self.data_delimiter = CSV_DATA_DELIM
-            self.item_delimiters = CSV_ITEM_DELIM
-        else:
-            self.data_delimiter = self.item_delimiters = None
-
-    def run(self):
-        sorted_output = sorted(self.items_of_interest, key=lambda x: float(x['Emolec']))
-        min_emolec_item = sorted_output[0]
-        is_write_header = self.args.rewrite and self.args.use_csv
-        with open('output_' + self.args.prefix.lower() + '.txt', 'w' if self.args.rewrite else 'a') as f:
-            if is_write_header:
-                write_header_csv(f)
-            write_item(min_emolec_item, f, self.args.use_csv)
-            write_delimiters(f, self.args.use_csv)
-        with open('output_' + self.args.prefix.lower() + '_all.txt', 'w' if self.args.rewrite else 'a') as f:
-            if is_write_header:
-                write_header_csv(f)
-            for item in sorted_output:
-                write_item(item, f, self.args.use_csv)
-                write_delimiters(f, self.args.use_csv)
+def collect_data(prefix, path):
+    sets = defaultdict(list)
+    sets_order = []
+    for filename in list_input_files(prefix, path):
+        set_trait = extract_filename_traits(filename)[0]
+        if set_trait not in sets:
+            sets_order.append(set_trait)
+        sets[set_trait].append(
+            get_line_as_dict(get_last_input_line(filename)))
+    return (sets_order, sets)
 
 
-class InputData:
-    def __init__(self, prefix):
-        self.args = args
-        self.prefix = prefix
-        self.items_of_interest = []
-
-    def get_data(self):
-        if not self.items_of_interest:
-            for filename in list_input_files(self.prefix):
-                self.items_of_interest.append(
-                    get_line_as_dict(self.get_last_input_line(filename)))
-        return self.items_of_interest
-
-    def get_last_input_line(self, filename):
-        input_lines = None
-        with open(filename, 'r') as f:
-            input_lines = f.read()
-        last_line = input_lines.split('\n')[-2]
-        return last_line
+def get_optimum(set_, reverse=False):
+    sorted_output = sorted(set_, key=lambda x: float(x['Emolec']))
+    if reverse:
+        sorted_output = reversed(sorted_output)
+    return sorted_output[0]
 
 
 def get_args():
@@ -116,11 +95,24 @@ def get_args():
     parser.add_argument("--csv", dest="use_csv",
                         action="store_true",
                         help="Write CSV output")
+    parser.add_argument("--path", dest="path",
+                        type=str,
+                        help="Path to search for input files")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
-    input = InputData(args.prefix)
-    output = TabularData(args, input.get_data())
-    output.run()
+    sets_order, sets = collect_data(args.prefix, args.path or ".")
+    with open('output_' + args.prefix.lower() + '.txt',
+              'w' if args.rewrite else 'a') as f:
+        for set_ in sets_order:
+            write_item(get_optimum(sets[set_]), f, args.use_csv)
+            write_delimiters(f, args.use_csv)
+    for set_ in sets_order:
+        with open('output_' + args.prefix.lower() + '_all.txt',
+                  'w' if args.rewrite else 'a') as f:
+            f.write("============= using energies '{0}' =============\n".format(set_))
+            for item in sets[set_]:
+                write_item(item, f, args.use_csv)
+                write_delimiters(f, args.use_csv)
