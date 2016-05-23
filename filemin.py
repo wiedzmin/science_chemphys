@@ -41,6 +41,8 @@ def get_last_input_line(filename):
 def extract_filename_traits(filename):
     filename = os.path.basename(filename)
     center_start = filename.find('Center')
+    if center_start < 0:
+        raise ValueError("Invalid filename")
     energies_str = filename[PREFIX_LEN:center_start]
     number_str = filename[center_start + 6: filename.rindex('.')]
     return (energies_str, number_str)
@@ -70,7 +72,10 @@ def collect_data(prefix, path):
     sets = defaultdict(list)
     sets_order = []
     for filename in list_input_files(prefix, path):
-        set_trait = extract_filename_traits(filename)[0]
+        try:
+            set_trait = extract_filename_traits(filename)[0]
+        except ValueError:
+            continue
         if set_trait not in sets:
             sets_order.append(set_trait)
         sets[set_trait].append(
