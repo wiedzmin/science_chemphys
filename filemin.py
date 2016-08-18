@@ -41,11 +41,25 @@ def get_last_input_line(filename):
 def extract_filename_traits(filename):
     filename = os.path.basename(filename)
     center_start = filename.find('Center')
-    if center_start < 0:
+    initpoint_start = filename.find('InitPoint')
+    if center_start > 0:
+        energies_str = filename[PREFIX_LEN:center_start]
+        number_str = filename[center_start + 6: filename.rindex('.')]
+        return (energies_str, number_str)
+    elif initpoint_start > 0:
+        traits_str = filename[initpoint_start+9: filename.rindex('.')]
+        if len(traits_str) > 4 and traits_str.startswith('1010'):
+            energies_str = traits_str[:4]
+            number_str = traits_str[4:]
+        elif len(traits_str) <= 4 and (traits_str.startswith('10') or traits_str[1:].startswith('10')):
+            energies_str = traits_str[:3]
+            number_str = traits_str[3:]
+        else:
+            energies_str = traits_str[:2]
+            number_str = traits_str[2:]
+        return (energies_str, number_str)
+    else:
         raise ValueError("Invalid filename")
-    energies_str = filename[PREFIX_LEN:center_start]
-    number_str = filename[center_start + 6: filename.rindex('.')]
-    return (energies_str, number_str)
 
 
 def write_header_csv(f):
